@@ -1,0 +1,29 @@
+<!-- Amazon Data Extractor Pro - Icon Template -->
+<!-- This SVG can be converted to PNG files of different sizes -->
+
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#ff9900" stroke="#e68900" stroke-width="4"/>
+  
+  <!-- Amazon arrow -->
+  <path d="M 30 45 L 50 45 L 50 35 L 98 65 L 50 95 L 50 85 L 30 85 Z" fill="white"/>
+  
+  <!-- Data extraction symbol -->
+  <rect x="35" y="70" width="8" height="8" fill="white" opacity="0.8"/>
+  <rect x="45" y="70" width="8" height="8" fill="white" opacity="0.8"/>
+  <rect x="55" y="70" width="8" height="8" fill="white" opacity="0.8"/>
+  <rect x="65" y="70" width="8" height="8" fill="white" opacity="0.8"/>
+  <rect x="75" y="70" width="8" height="8" fill="white" opacity="0.8"/>
+  <rect x="85" y="70" width="8" height="8" fill="white" opacity="0.8"/>
+  
+  <!-- Extraction lines -->
+  <path d="M 35 78 L 45 78" stroke="white" stroke-width="2" opacity="0.6"/>
+  <path d="M 45 78 L 55 78" stroke="white" stroke-width="2" opacity="0.6"/>
+  <path d="M 55 78 L 65 78" stroke="white" stroke-width="2" opacity="0.6"/>
+  <path d="M 65 78 L 75 78" stroke="white" stroke-width="2" opacity="0.6"/>
+  <path d="M 75 78 L 85 78" stroke="white" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Pro badge -->
+  <circle cx="100" cy="28" r="12" fill="#232f3e"/>
+  <text x="100" y="33" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold">P</text>
+</svg>

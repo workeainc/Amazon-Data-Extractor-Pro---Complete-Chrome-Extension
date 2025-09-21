@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Data Extractor Pro</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <div class="header">
+            <img src="icons/icon48.png" alt="Amazon Data Extractor Pro" class="logo" onerror="this.style.display='none'">
+            <h1>Amazon Data Extractor Pro</h1>
+        </div>
+        
+        <div class="view-tabs">
+            <button id="view-products" class="view-tab active">Products</button>
+            <button id="view-sellers" class="view-tab">Sellers</button>
+        </div>
+        
+        <div class="content">
+            <div class="status-section">
+                <div id="status" class="status">Ready to extract data</div>
+            </div>
+            
+            <div class="actions">
+                <button id="extract-all" class="btn primary">Extract All Data</button>
+                <button id="extract-current" class="btn secondary">Extract Current Product</button>
+                <button id="extract-sellers" class="btn info">Extract Seller Info</button>
+            </div>
+            
+            <div id="data-container" class="data-container">
+                <div class="welcome-message">
+                    <h3>🎯 Welcome to Amazon Data Extractor Pro!</h3>
+                    <p>Click "Extract All Data" to start extracting product and seller information from Amazon pages.</p>
+                    <div class="features">
+                        <h4>✨ Features:</h4>
+                        <ul>
+                            <li>📦 Extract product details (name, price, rating, reviews)</li>
+                            <li>👤 Extract seller information (name, rating, contact)</li>
+                            <li>🔗 Find seller social media links</li>
+                            <li>📊 Export data to CSV/JSON</li>
+                            <li>🔍 Search products with keywords</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <button id="export-csv" class="btn secondary">Export CSV</button>
+                <button id="export-json" class="btn secondary">Export JSON</button>
+                <button id="clear-data" class="btn danger">Clear Data</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -10,7 +10,8 @@
     "tabs",
     "notifications",
     "contextMenus",
-    "alarms"
+    "alarms",
+    "downloads"
   ],
   "host_permissions": [
     "https://www.amazon.com/*",

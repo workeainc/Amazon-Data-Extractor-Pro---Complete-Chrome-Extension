@@ -18,28 +18,71 @@ class AmazonDataExtractor {
 
   setupMessageListener() {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      switch (request.action) {
-        case 'extractData':
-          this.extractAllData().then(sendResponse);
+      console.log('Content script received message:', request);
+      
+      try {
+        // Check if extension context is still valid
+        if (!chrome.runtime || !chrome.runtime.id) {
+          sendResponse({ 
+            error: 'Extension context invalidated. Please reload the page.',
+            status: 'error' 
+          });
           return true;
-        case 'extractCurrentProduct':
-          this.extractCurrentProduct().then(sendResponse);
-          return true;
-        case 'trackProduct':
-          this.trackProduct(request.data).then(sendResponse);
-          return true;
-        case 'getTrackedProducts':
-          this.getTrackedProducts().then(sendResponse);
-          return true;
-        case 'sortProducts':
-          this.sortProducts(request.sortBy).then(sendResponse);
-          return true;
-        case 'filterProducts':
-          this.filterProducts(request.filter).then(sendResponse);
-          return true;
-        case 'automateAction':
-          this.automateAction(request.actionType).then(sendResponse);
-          return true;
+        }
+        
+        switch (request.action) {
+          case 'extractData':
+            this.extractAllData().then(sendResponse).catch(error => {
+              sendResponse({ error: error.message, status: 'error' });
+            });
+            return true;
+          case 'extractCurrentProduct':
+            this.extractCurrentProduct().then(sendResponse).catch(error => {
+              sendResponse({ error: error.message, status: 'error' });
+            });
+            return true;
+          case 'extractSellerData':
+            this.extractSellerInformation().then(sendResponse).catch(error => {
+              sendResponse({ error: error.message, status: 'error' });
+            });
+            return true;
+          case 'trackProduct':
+            this.trackProduct(request.data).then(sendResponse).catch(error => {
+              sendResponse({ error: error.message, status: 'error' });
+            });
+            return true;
+          case 'getTrackedProducts':
+            this.getTrackedProducts().then(sendResponse).catch(error => {
+              sendResponse({ error: error.message, status: 'error' });
+            });
+            return true;
+          case 'sortProducts':
+            this.sortProducts(request.sortBy).then(sendResponse).catch(error => {
+              sendResponse({ error: error.message, status: 'error' });
+            });
+            return true;
+          case 'filterProducts':
+            this.filterProducts(request.filter).then(sendResponse).catch(error => {
+              sendResponse({ error: error.message, status: 'error' });
+            });
+            return true;
+          case 'automateAction':
+            this.automateAction(request.actionType).then(sendResponse).catch(error => {
+              sendResponse({ error: error.message, status: 'error' });
+            });
+            return true;
+          case 'ping':
+            // Simple ping to test communication
+            sendResponse({ status: 'ok', message: 'Content script is working' });
+            return true;
+        }
+      } catch (error) {
+        console.error('Error in message listener:', error);
+        sendResponse({ 
+          error: error.message, 
+          status: 'error' 
+        });
+        return true;
       }
     });
   }
@@ -54,9 +97,31 @@ class AmazonDataExtractor {
         <button id="toggle-panel" class="toggle-btn"></button>
       </div>
       <div class="extractor-controls">
-        <button id="extract-all" class="btn primary">Extract All Products</button>
-        <button id="extract-current" class="btn secondary">Extract Current</button>
-        <button id="track-product" class="btn success">Track Product</button>
+        <div class="search-section">
+          <div class="search-input-group">
+            <input type="text" id="search-keyword" placeholder="Enter product keyword..." />
+            <button id="search-btn" class="btn primary">Search</button>
+          </div>
+          <div class="popular-keywords">
+            <span class="keyword-label">Popular:</span>
+            <div class="keyword-tags">
+              <span class="keyword-tag" data-keyword="laptop">Laptop</span>
+              <span class="keyword-tag" data-keyword="smartphone">Smartphone</span>
+              <span class="keyword-tag" data-keyword="headphones">Headphones</span>
+              <span class="keyword-tag" data-keyword="camera">Camera</span>
+              <span class="keyword-tag" data-keyword="watch">Watch</span>
+              <span class="keyword-tag" data-keyword="shoes">Shoes</span>
+              <span class="keyword-tag" data-keyword="book">Books</span>
+              <span class="keyword-tag" data-keyword="kitchen">Kitchen</span>
+            </div>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button id="extract-all" class="btn primary">Extract All Products</button>
+          <button id="extract-current" class="btn secondary">Extract Current</button>
+          <button id="track-product" class="btn success">Track Product</button>
+          <button id="extract-sellers" class="btn info">Extract Seller Info</button>
+        </div>
         <div class="automation-controls">
           <select id="sort-select">
             <option value="">Sort by...</option>
@@ -88,6 +153,27 @@ class AmazonDataExtractor {
   }
 
   setupUIEvents() {
+    // Search functionality
+    document.getElementById('search-btn').addEventListener('click', () => {
+      this.performSearch();
+    });
+
+    document.getElementById('search-keyword').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.performSearch();
+      }
+    });
+
+    // Popular keyword tags
+    document.querySelectorAll('.keyword-tag').forEach(tag => {
+      tag.addEventListener('click', () => {
+        const keyword = tag.getAttribute('data-keyword');
+        document.getElementById('search-keyword').value = keyword;
+        this.performSearch();
+      });
+    });
+
+    // Action buttons
     document.getElementById('extract-all').addEventListener('click', () => {
       this.extractAllData();
     });
@@ -98,6 +184,10 @@ class AmazonDataExtractor {
 
     document.getElementById('track-product').addEventListener('click', () => {
       this.trackCurrentProduct();
+    });
+
+    document.getElementById('extract-sellers').addEventListener('click', () => {
+      this.extractSellerInformation();
     });
 
     document.getElementById('apply-sort').addEventListener('click', () => {
@@ -119,6 +209,23 @@ class AmazonDataExtractor {
     });
   }
 
+  performSearch() {
+    const keyword = document.getElementById('search-keyword').value.trim();
+    
+    if (!keyword) {
+      this.updateStatus('Please enter a search keyword', 'warning');
+      return;
+    }
+
+    this.updateStatus(`Searching for: ${keyword}...`, 'loading');
+    
+    // Construct Amazon search URL
+    const searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`;
+    
+    // Navigate to search results
+    window.location.href = searchUrl;
+  }
+
   async extractAllData() {
     if (this.isExtracting) return;
     
@@ -126,6 +233,11 @@ class AmazonDataExtractor {
     this.updateStatus('Extracting product data...');
     
     try {
+      // Check if extension context is still valid
+      if (!chrome.runtime || !chrome.runtime.id) {
+        throw new Error('Extension context invalidated. Please reload the page.');
+      }
+      
       const products = [];
       const productElements = this.getProductElements();
       
@@ -140,16 +252,27 @@ class AmazonDataExtractor {
       this.extractedData = products;
       this.updateStatus(`Extracted ${products.length} products`);
       
-      // Send data to popup
-      chrome.runtime.sendMessage({
-        action: 'dataExtracted',
-        data: products
-      });
+      // Send data to popup with error handling
+      try {
+        chrome.runtime.sendMessage({
+          action: 'dataExtracted',
+          data: products
+        });
+      } catch (messageError) {
+        console.warn('Could not send message to popup:', messageError);
+        // Store data locally as fallback
+        localStorage.setItem('amazon-extracted-data', JSON.stringify(products));
+      }
       
       return products;
     } catch (error) {
       console.error('Error extracting data:', error);
-      this.updateStatus('Error extracting data');
+      this.updateStatus('Error extracting data: ' + error.message);
+      
+      // If context is invalidated, show reload message
+      if (error.message.includes('context invalidated')) {
+        this.updateStatus('Extension reloaded. Please refresh the page.');
+      }
     } finally {
       this.isExtracting = false;
     }
@@ -349,19 +472,111 @@ class AmazonDataExtractor {
   }
 
   extractSeller(element) {
-    const selectors = [
+    const sellerData = {
+      name: null,
+      rating: null,
+      feedbackCount: null,
+      contactInfo: null,
+      socialLinks: [],
+      businessInfo: null
+    };
+
+    // Extract seller name
+    const nameSelectors = [
       '#merchant-info',
       '.a-size-small.a-color-secondary',
-      '[data-automation-id="seller-name"]'
+      '[data-automation-id="seller-name"]',
+      '#sellerProfileTriggerId',
+      '.a-link-normal[href*="/stores/"]',
+      '.a-size-small.a-color-base'
     ];
     
-    for (const selector of selectors) {
+    for (const selector of nameSelectors) {
       const sellerElement = element.querySelector(selector);
       if (sellerElement) {
-        return sellerElement.textContent.trim();
+        sellerData.name = sellerElement.textContent.trim();
+        break;
       }
     }
-    return null;
+
+    // Extract seller rating and feedback
+    const ratingSelectors = [
+      '.a-icon-alt[aria-label*="stars"]',
+      '.a-size-small.a-color-base[href*="/feedback/"]',
+      '.seller-rating'
+    ];
+
+    for (const selector of ratingSelectors) {
+      const ratingElement = element.querySelector(selector);
+      if (ratingElement) {
+        const ratingText = ratingElement.textContent || ratingElement.getAttribute('aria-label');
+        const ratingMatch = ratingText.match(/(\d+\.?\d*)\s*stars?/i);
+        if (ratingMatch) {
+          sellerData.rating = parseFloat(ratingMatch[1]);
+        }
+        
+        const feedbackMatch = ratingText.match(/(\d+)/);
+        if (feedbackMatch) {
+          sellerData.feedbackCount = parseInt(feedbackMatch[1]);
+        }
+      }
+    }
+
+    // Extract seller profile link
+    const profileLink = element.querySelector('a[href*="/stores/"], a[href*="/seller/"], a[href*="/feedback/"]');
+    if (profileLink) {
+      sellerData.profileUrl = profileLink.href;
+    }
+
+    // Try to extract additional seller information from seller page
+    this.extractSellerDetails(sellerData);
+
+    return sellerData;
+  }
+
+  async extractSellerDetails(sellerData) {
+    if (!sellerData.profileUrl) return;
+
+    try {
+      // This would require additional API calls to seller pages
+      // For now, we'll extract what's available on the current page
+      
+      // Look for seller contact information
+      const contactSelectors = [
+        '[data-automation-id="seller-contact"]',
+        '.seller-contact-info',
+        '.merchant-contact'
+      ];
+
+      for (const selector of contactSelectors) {
+        const contactElement = document.querySelector(selector);
+        if (contactElement) {
+          sellerData.contactInfo = contactElement.textContent.trim();
+          break;
+        }
+      }
+
+      // Look for social media links
+      const socialLinks = document.querySelectorAll('a[href*="facebook"], a[href*="twitter"], a[href*="instagram"], a[href*="linkedin"]');
+      socialLinks.forEach(link => {
+        sellerData.socialLinks.push({
+          platform: this.getSocialPlatform(link.href),
+          url: link.href
+        });
+      });
+
+    } catch (error) {
+      console.log('Could not extract additional seller details:', error);
+    }
+  }
+
+  getSocialPlatform(url) {
+    if (url.includes('facebook')) return 'Facebook';
+    if (url.includes('twitter')) return 'Twitter';
+    if (url.includes('instagram')) return 'Instagram';
+    if (url.includes('linkedin')) return 'LinkedIn';
+    if (url.includes('youtube')) return 'YouTube';
+    return 'Other';
   }
 
   extractCategory(element) {
@@ -415,6 +630,48 @@ class AmazonDataExtractor {
     const productData = this.extractCurrentProduct();
     if (productData) {
       return this.trackProduct(productData);
+    }
+  }
+
+  async extractSellerInformation() {
+    this.updateStatus('Extracting seller information...', 'loading');
+    
+    try {
+      const sellers = [];
+      const productElements = this.getProductElements();
+      
+      for (const element of productElements) {
+        const sellerData = this.extractSeller(element);
+        if (sellerData && sellerData.name) {
+          sellers.push(sellerData);
+        }
+      }
+      
+      // Remove duplicates based on seller name
+      const uniqueSellers = sellers.filter((seller, index, self) => 
+        index === self.findIndex(s => s.name === seller.name)
+      );
+      
+      this.updateStatus(`Extracted ${uniqueSellers.length} unique sellers`, 'success');
+      
+      // Store seller data
+      this.sellerData = uniqueSellers;
+      
+      // Send to popup
+      try {
+        chrome.runtime.sendMessage({
+          action: 'sellerDataExtracted',
+          data: uniqueSellers
+        });
+      } catch (error) {
+        console.warn('Could not send seller data to popup:', error);
+        localStorage.setItem('amazon-seller-data', JSON.stringify(uniqueSellers));
+      }
+      
+      return uniqueSellers;
+    } catch (error) {
+      console.error('Error extracting seller information:', error);
+      this.updateStatus('Error extracting seller information', 'error');
     }
   }
 
@@ -579,10 +836,21 @@ class AmazonDataExtractor {
 }
 
 // Initialize the extractor when the page loads
+console.log('Amazon Data Extractor - Content script loaded');
+
+function initializeExtractor() {
+  try {
+    console.log('Initializing AmazonDataExtractor...');
+    const extractor = new AmazonDataExtractor();
+    window.amazonExtractor = extractor;
+    console.log('AmazonDataExtractor initialized successfully');
+  } catch (error) {
+    console.error('Error initializing AmazonDataExtractor:', error);
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    new AmazonDataExtractor();
-  });
+  document.addEventListener('DOMContentLoaded', initializeExtractor);
 } else {
-  new AmazonDataExtractor();
+  initializeExtractor();
 }
